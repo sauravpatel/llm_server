@@ -11,6 +11,9 @@ from llama_wrapper import LlamaWrapper
 from language_translator import LangTranslate
 from custom_decorators import log_runtime_metrics
 import os
+from io import BytesIO
+import base64
+from PIL import Image
 
 origins = [
     "http://localhost:3000",
@@ -82,6 +85,33 @@ def translate_text(item: TranslateItem):
         return {"description":"An error occurred during text translation."}, 400
 
     return response
+
+class ResizeImageItem(BaseModel):
+    base64_image: str
+    ratio: Optional[float] = 1
+    quality: Optional[int] = 80
+
+@app.post('/resize_image')
+def resize_image(item: ResizeImageItem):
+    # Decode base64 image
+    image_data = base64.b64decode(item.base64_image)
+    # Open image using Pillow
+    img = Image.open(BytesIO(image_data))
+    
+    # Convert image to RGB if it is RGBA
+    if img.mode == 'RGBA':
+        img = img.convert('RGB')
+    
+    # Resize image
+    width, height = img.size
+    ratio = item.ratio
+    resized_img = img.resize((int(width*ratio), int(height*ratio)))
+    # Convert image to bytes
+    buffer = BytesIO()
+    resized_img.save(buffer, format='JPEG', quality=item.quality)
+    # Encode image as base64
+    resized_base64_image = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    return {'resized_image': resized_base64_image}
 
 if __name__ == '__main__':
     uvicorn.run(app, host="127.0.0.1", port=5000)
