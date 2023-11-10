@@ -1,7 +1,7 @@
 from typing import Union, Optional
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -65,10 +65,10 @@ def generate_text(data: GenerateItem):
         response = llama_wrapper.generate_text(input_texts, temperature, stop_sequences)
         print (response)
     except Exception as e:
-        print (f'Error {str(e)}')
-        return {"description":"An error occurred during text generation."}, 400
-
-    return response, 500
+        traceback.print_exc()
+        raise HTTPException(status_code=500, description="An error occurred during text generation.")
+    
+    return response
 
 @app.post('/translate')
 @log_runtime_metrics
